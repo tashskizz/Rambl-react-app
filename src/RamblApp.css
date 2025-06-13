@@ -1,0 +1,256 @@
+/* RamblApp.css - Rambl Voice Journaling App Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #9333ea 100%);
+    min-height: 100vh;
+    color: #2d1b69;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Ensure no content bleeds from hidden containers */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #9333ea 100%);
+    z-index: -1;
+}
+
+.app-container {
+    max-width: 375px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    background: white;
+    box-shadow: 0 0 50px rgba(106, 90, 205, 0.1);
+    z-index: 10;
+}
+
+.screen {
+    min-height: 100vh;
+    position: relative;
+    opacity: 1;
+    transform: translateX(0);
+    transition: all 0.4s ease-out;
+    background: white;
+    z-index: 1;
+}
+
+.screen.active {
+    opacity: 1;
+    transform: translateX(0);
+    z-index: 2;
+}
+
+/* Auth Screens */
+.auth-screen {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #9333ea 100%);
+    min-height: 100vh;
+}
+
+.floating-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    animation: float 8s ease-in-out infinite;
+}
+
+.floating-shape:nth-child(1) {
+    width: 80px; height: 80px; top: 20%; left: -20px; animation-delay: 0s;
+}
+.floating-shape:nth-child(2) {
+    width: 120px; height: 120px; top: 60%; right: -40px; animation-delay: 2s;
+}
+.floating-shape:nth-child(3) {
+    width: 60px; height: 60px; bottom: 30%; left: 10%; animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
+    50% { transform: translateY(-30px) rotate(180deg); opacity: 0.3; }
+}
+
+.logo {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 30px;
+}
+
+.logo svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.2));
+}
+
+.welcome-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 12px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.welcome-subtitle {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+    line-height: 1.4;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.form-section {
+    background: white;
+    border-radius: 30px 30px 0 0;
+    padding: 40px 30px 30px;
+    margin-top: 20px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.form-section::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 2px;
+}
+
+.form-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2d1b69;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.form-subtitle {
+    font-size: 16px;
+    color: #6b46c1;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-input {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(139, 92, 246, 0.15);
+    border-radius: 16px;
+    font-size: 16px;
+    background: rgba(248, 246, 255, 0.5);
+    color: #2d1b69;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: #8b5cf6;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+}
+
+.primary-button {
+    width: 100%;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 30px 0 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
+
+.primary-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+}
+
+.auth-switch {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #6b46c1;
+}
+
+.auth-switch button {
+    background: none;
+    border: none;
+    color: #8b5cf6;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 14px;
+}
+
+.notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
+    z-index: 1000;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 375px) {
+    .app-container {
+        max-width: 100%;
+    }
+}
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
