@@ -1,6 +1,10 @@
-import { useAuth } from './hooks/useAuth';
 import React, { useState, useEffect } from 'react';
+import { useAuth } from './hooks/useAuth';
+import apiService from './apiService';
 import './RamblApp.css';
+import audioRecorder from './services/audioRecorder';
+import AnalyticsScreenComponent from './components/AnalyticsScreen';
+import JournalSessions from './components/JournalSessions';
 
 // Move all component definitions OUTSIDE of RamblApp
 const FloatingShapes = () => (
@@ -26,42 +30,6 @@ const Logo = ({ className = "logo" }) => (
     </svg>
   </div>
 );
-
-const BottomNav = ({ currentScreen, showScreen }) => {
-  const navItems = [
-    { id: 'homeScreen', icon: '🏠', label: 'Home' },
-    { id: 'analyticsScreen', icon: '📊', label: 'Analytics' },
-    { id: 'libraryScreen', icon: '📚', label: 'Library' },
-    { id: 'settingsScreen', icon: '⚙️', label: 'Settings' }
-  ];
-
-  const getActiveIndex = () => {
-    const navMap = {
-      'homeScreen': 0,
-      'analyticsScreen': 1,
-      'timelineScreen': 1,
-      'libraryScreen': 2,
-      'settingsScreen': 3,
-      'promptScreen': 0
-    };
-    return navMap[currentScreen] ?? 0;
-  };
-
-  return (
-    <div className="bottom-nav">
-      {navItems.map((item, index) => (
-        <div 
-          key={item.id}
-          className={`nav-item ${getActiveIndex() === index ? 'active' : ''}`}
-          onClick={() => showScreen(item.id)}
-        >
-          <div className="nav-icon">{item.icon}</div>
-          <span>{item.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const LoginScreen = ({ loginForm, setLoginForm, doLogin, showScreen, error, loading }) => (
   <div className="screen auth-screen active">
@@ -163,7 +131,6 @@ const SignupScreen = ({ signupForm, setSignupForm, doSignup, showScreen, error, 
             type="text" 
             className="form-input" 
             placeholder="Full name" 
-            name="name" 
             value={signupForm.name}
             onChange={(e) => setSignupForm(prev => ({...prev, name: e.target.value}))}
             required 
@@ -174,7 +141,6 @@ const SignupScreen = ({ signupForm, setSignupForm, doSignup, showScreen, error, 
             type="email" 
             className="form-input" 
             placeholder="Email address" 
-            name="email"
             value={signupForm.email}
             onChange={(e) => setSignupForm(prev => ({...prev, email: e.target.value}))}
             required 
@@ -185,7 +151,6 @@ const SignupScreen = ({ signupForm, setSignupForm, doSignup, showScreen, error, 
             type="password" 
             className="form-input" 
             placeholder="Password" 
-            name="password" 
             value={signupForm.password}
             onChange={(e) => setSignupForm(prev => ({...prev, password: e.target.value}))}
             required 
@@ -208,13 +173,99 @@ const SignupScreen = ({ signupForm, setSignupForm, doSignup, showScreen, error, 
   </div>
 );
 
+const BottomNav = ({ currentScreen, showScreen }) => {
+  const navItems = [
+    { id: 'homeScreen', icon: '🏠', label: 'Home' },
+    { id: 'analyticsScreen', icon: '📊', label: 'Analytics' },
+    { id: 'libraryScreen', icon: '📚', label: 'Library' },
+    { id: 'settingsScreen', icon: '⚙️', label: 'Settings' }
+  ];
+
+  const getActiveIndex = () => {
+    const navMap = {
+      'homeScreen': 0,
+      'analyticsScreen': 1,
+      'timelineScreen': 1,
+      'libraryScreen': 2,
+      'settingsScreen': 3,
+      'promptScreen': 0
+    };
+    return navMap[currentScreen] ?? 0;
+  };
+
+  return (
+    <div className="bottom-nav">
+      {navItems.map((item, index) => (
+        <div 
+          key={item.id}
+          className={`nav-item ${getActiveIndex() === index ? 'active' : ''}`}
+          onClick={() => showScreen(item.id)}
+        >
+          <div className="nav-icon">{item.icon}</div>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// AnalyticsScreen wrapper - DEFINE THIS SECOND (after BottomNav)
+const AnalyticsScreen = ({ user, userId, currentScreen, showScreen, showNotification }) => {
+  if (!user) {
+    return (
+      <div className="screen active">
+        <div className="header">
+          <div className="header-content">
+            <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Your Journey</h1>
+            <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Please log in to view analytics</p>
+          </div>
+        </div>
+        <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '15px' }}>🔒</div>
+            <p style={{ color: '#6b46c1', fontSize: '16px', marginBottom: '20px' }}>
+              Log in to see your analytics
+            </p>
+            <button 
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}
+              onClick={() => showScreen('loginScreen')}
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+        <BottomNav currentScreen={currentScreen} showScreen={showScreen} />
+      </div>
+    );
+  }
+
+  return (
+    <AnalyticsScreenComponent 
+      userId={userId}
+      showScreen={showScreen}
+      showNotification={showNotification}
+      currentScreen={currentScreen}
+      BottomNav={BottomNav}
+    />
+  );
+};
 const OnboardingScreen = ({ 
   currentOnboardingStep, 
   userData, 
   nextOnboardingStep, 
   selectOnboardingOption, 
   toggleOnboardingMultiOption, 
-  finishOnboarding 
+  finishOnboarding, 
+  isLoading 
 }) => {
   const steps = [
     {
@@ -411,8 +462,12 @@ const OnboardingScreen = ({
           <p className="onboarding-subtitle">Welcome to Rambl. Let's start your first journal entry.</p>
         </div>
         <div className="content-section">
-          <button className="continue-button enabled" onClick={finishOnboarding}>
-            Start Journaling
+          <button 
+          className={`continue-button ${isLoading ? '' : 'enabled'}`} 
+          onClick={finishOnboarding}
+          disabled={isLoading}
+>
+          {isLoading ? 'Setting up your profile...' : 'Start Journaling'}
           </button>
         </div>
       </div>
@@ -436,7 +491,7 @@ const OnboardingScreen = ({
   );
 };
 
-const HomeScreen = ({ selectedCategory, categoryInfo, selectCategory, showScreen, showNotification }) => (
+const HomeScreen = ({ selectedCategory, categoryInfo, selectCategory, showScreen, showNotification,setSelectedCategory,setSelectedLevel,setCurrentPrompt,setCurrentScreen }) => (
   <div className="screen active">
     <div className="header">
       <div className="header-content home-header">
@@ -467,18 +522,18 @@ const HomeScreen = ({ selectedCategory, categoryInfo, selectCategory, showScreen
       <button 
         className="voice-button" 
         onClick={() => {
-          if (!selectedCategory) {
-            showNotification('Please select a category first, then choose your prompt depth 📝');
-            return;
-          }
-          showNotification('Please choose your question depth first 🎯');
+      // Start free recording (no category/prompt needed)
+          setSelectedCategory('general');
+          setSelectedLevel('free');
+          setCurrentPrompt('Free Rambl - Speak your mind');
+          showNotification('Ready to Rambl? 🎤');
           setTimeout(() => {
-            showScreen('promptScreen');
-          }, 1000);
-        }}
-      >
-        🎤
-      </button>
+          setCurrentScreen('freeRecordingScreen');
+        }, 500);
+      }}
+    >
+           🎤
+          </button>
 
       <div style={{ background: 'linear-gradient(135deg, #f8f6ff 0%, #f3f0ff 100%)', borderRadius: '20px', padding: '25px', marginTop: '30px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '15px', color: '#6b46c1' }}>Your Recent Insights</h3>
@@ -509,19 +564,21 @@ const PromptScreen = ({
   categoryInfo, 
   selectedLevel, 
   prompts, 
+  currentPrompt,
   showScreen, 
   selectDifficulty, 
   selectRandomDifficulty, 
   showNotification, 
   shuffleMainPrompt, 
   startMainRecording, 
-  resetMainSelection 
+  resetMainSelection, 
+  isRecording, 
+  recordingDuration, 
+  stopMainRecording
 }) => {
-  const getCurrentPrompt = () => {
-    if (!selectedLevel) return '';
-    const prompts_array = prompts[currentPromptCategory][selectedLevel];
-    return prompts_array[0]; // For demo, show first prompt
-  };
+ const getCurrentPrompt = () => {
+  return currentPrompt || '';
+};
 
   return (
     <div className="screen active">
@@ -590,16 +647,23 @@ const PromptScreen = ({
               </span>
               <span>{categoryInfo[currentPromptCategory].title} Question</span>
             </div>
-            <div className="prompt-text">{getCurrentPrompt()}</div>
+            <div className="prompt-text">{currentPrompt}</div>
             <div className="prompt-actions">
               <button className="action-button" onClick={shuffleMainPrompt}>
                 <span>🔄</span>
                 <span>New Question</span>
               </button>
-              <button className="action-button primary" onClick={startMainRecording}>
-                <span>🎤</span>
-                <span>Start Recording</span>
-              </button>
+              <button 
+                    className={`action-button primary ${isRecording ? 'recording' : ''}`}
+                    onClick={isRecording ? stopMainRecording : startMainRecording}
+>
+                    <span>{isRecording ? '⏹️' : '🎤'}</span>
+                    <span>
+                      {isRecording 
+                        ? `Stop Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})` 
+                        : 'Start Recording'}
+                    </span>
+                  </button>
             </div>
           </div>
         )}
@@ -618,96 +682,147 @@ const PromptScreen = ({
   );
 };
 
-const AnalyticsScreen = ({ showScreen }) => (
-  <div className="screen active">
-    <div className="header">
-      <div className="header-content">
-        <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Your Journey</h1>
-        <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Insights from your voice</p>
-        <div className="time-selector">
-          <div className="time-option">7D</div>
-          <div className="time-option active">30D</div>
-          <div className="time-option">90D</div>
-          <div className="time-option">All</div>
+const FreeRecordingScreen = ({
+  showScreen,
+  startMainRecording,
+  stopMainRecording,
+  isRecording,
+  recordingDuration
+}) => {
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="screen active">
+      <div className="header">
+        <div className="header-content">
+          <button className="back-button" onClick={() => showScreen('homeScreen')}>
+            <span>←</span>
+            <span>Back to Home</span>
+          </button>
+          
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <div style={{ fontSize: '64px', marginBottom: '20px' }}>🎤</div>
+            <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '12px', color: '#2d1b69' }}>
+              Ready to Rambl?
+            </h1>
+            <p style={{ fontSize: '18px', color: '#8b5cf6', marginBottom: '8px' }}>
+              Speak your mind. No prompts, no pressure.
+            </p>
+            <p style={{ fontSize: '14px', color: '#a78bfa', opacity: '0.8' }}>
+              Up to 10 minutes
+            </p>
+          </div>
         </div>
+      </div>
+
+      <div className="main-content">
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          {!isRecording ? (
+            <>
+              <div style={{
+                width: '180px',
+                height: '180px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 30px',
+                cursor: 'pointer',
+                transition: 'transform 0.3s ease',
+                boxShadow: '0 10px 40px rgba(139, 92, 246, 0.3)'
+              }}
+              onClick={startMainRecording}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span style={{ fontSize: '72px' }}>🎤</span>
+              </div>
+              <p style={{ fontSize: '20px', fontWeight: '600', color: '#6b46c1', marginBottom: '8px' }}>
+                Tap to start recording
+              </p>
+              <p style={{ fontSize: '14px', color: '#8b5cf6' }}>
+                Take a deep breath and share what's on your mind
+              </p>
+            </>
+          ) : (
+            <>
+              <div style={{
+                width: '180px',
+                height: '180px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 30px',
+                animation: 'pulse 2s infinite',
+                boxShadow: '0 10px 40px rgba(239, 68, 68, 0.4)'
+              }}>
+                <span style={{ fontSize: '72px' }}>⏸️</span>
+              </div>
+              
+              <div style={{
+                fontSize: '48px',
+                fontWeight: '700',
+                color: '#6b46c1',
+                marginBottom: '12px',
+                fontFamily: 'monospace'
+              }}>
+                {formatTime(recordingDuration)}
+              </div>
+              
+              <p style={{ fontSize: '16px', color: '#8b5cf6', marginBottom: '30px' }}>
+                Recording... Keep going!
+              </p>
+
+              <button
+                onClick={stopMainRecording}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '16px 40px',
+                  borderRadius: '16px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(239, 68, 68, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(239, 68, 68, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.3)';
+                }}
+              >
+                ⏹️ Stop & Save
+              </button>
+            </>
+          )}
+        </div>
+
+        <style>{`
+          @keyframes pulse {
+            0%, 100% {
+              box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
+            }
+            50% {
+              box-shadow: 0 10px 60px rgba(239, 68, 68, 0.6);
+            }
+          }
+        `}</style>
       </div>
     </div>
-
-    <div className="main-content">
-      <div className="metric-grid">
-        <div className="metric-card" onClick={() => showScreen('timelineScreen')}>
-          <div className="metric-value">23</div>
-          <div className="metric-label">Sessions</div>
-          <div style={{ fontSize: '11px', marginTop: '5px', padding: '2px 8px', borderRadius: '8px', fontWeight: '600', color: '#059669', background: 'rgba(5, 150, 105, 0.1)' }}>+18%</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">4.2</div>
-          <div className="metric-label">Avg Mood</div>
-          <div style={{ fontSize: '11px', marginTop: '5px', padding: '2px 8px', borderRadius: '8px', fontWeight: '600', color: '#059669', background: 'rgba(5, 150, 105, 0.1)' }}>+0.8</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">156</div>
-          <div className="metric-label">Min Spoken</div>
-          <div style={{ fontSize: '11px', marginTop: '5px', padding: '2px 8px', borderRadius: '8px', fontWeight: '600', color: '#059669', background: 'rgba(5, 150, 105, 0.1)' }}>+12%</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">78%</div>
-          <div className="metric-label">Positivity</div>
-          <div style={{ fontSize: '11px', marginTop: '5px', padding: '2px 8px', borderRadius: '8px', fontWeight: '600', color: '#059669', background: 'rgba(5, 150, 105, 0.1)' }}>+15%</div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '15px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '10px', fontSize: '22px' }}>📈</span>
-          Emotional Journey
-        </h2>
-        <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
-          <div style={{ height: '120px', background: 'linear-gradient(to right, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.15) 25%, rgba(139, 92, 246, 0.2) 50%, rgba(168, 85, 247, 0.15) 75%, rgba(139, 92, 246, 0.1) 100%)', borderRadius: '8px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '30%', left: '0', right: '0', height: '3px', background: 'linear-gradient(to right, #8b5cf6, #a855f7, #8b5cf6, #a855f7)', borderRadius: '2px' }}></div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '12px', color: '#8b5cf6' }}>
-            <span>Week 1</span>
-            <span>Week 2</span>
-            <span>Week 3</span>
-            <span>Week 4</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '15px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '10px', fontSize: '22px' }}>🧠</span>
-          AI Insights
-        </h2>
-        
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px', marginBottom: '15px', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.08)', borderLeft: '4px solid #8b5cf6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '20px', marginRight: '12px' }}>🌅</span>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#6b46c1' }}>Morning Clarity</span>
-          </div>
-          <div style={{ fontSize: '14px', color: '#4c1d95', lineHeight: '1.5', marginBottom: '10px' }}>
-            Your morning sessions show 40% higher positivity and clearer goal articulation.
-          </div>
-          <div style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '500', background: 'rgba(139, 92, 246, 0.08)', padding: '6px 12px', borderRadius: '20px', display: 'inline-block' }}>Set morning reminder</div>
-        </div>
-
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px', marginBottom: '15px', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.08)', borderLeft: '4px solid #8b5cf6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '20px', marginRight: '12px' }}>📚</span>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#6b46c1' }}>Growth Themes</span>
-          </div>
-          <div style={{ fontSize: '14px', color: '#4c1d95', lineHeight: '1.5', marginBottom: '10px' }}>
-            You've mentioned "learning" and "improvement" 15 times this month.
-          </div>
-          <div style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '500', background: 'rgba(139, 92, 246, 0.08)', padding: '6px 12px', borderRadius: '20px', display: 'inline-block' }}>Explore growth resources</div>
-        </div>
-      </div>
-    </div>
-
-    <BottomNav currentScreen="analyticsScreen" showScreen={showScreen} />
-  </div>
-);
+  );
+};
 
 const LibraryScreen = ({ showScreen }) => (
   <div className="screen active">
@@ -800,143 +915,298 @@ const LibraryScreen = ({ showScreen }) => (
   </div>
 );
 
-const SettingsScreen = ({ settingsUserData, toggleNotification, confirmLogout, showNotification, showScreen }) => (
-  <div className="screen active">
-    <div className="header">
-      <div className="header-content">
-        <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Settings</h1>
-        <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Manage your account and preferences</p>
+const SettingsScreen = ({ showNotification, showScreen, userId }) => {
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load user profile when component mounts
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      const currentUserId = userId;
+      const response = await apiService.getUserProfile(currentUserId);
+      
+      if (response.success && response.profile) {
+        setProfileData(response.profile);
+      } else {
+        // If no profile exists, create a default one
+        console.log('No profile found, using defaults');
+        setProfileData({
+          name: 'Rambl User',
+          email: 'user@example.com',
+          preferences: {
+            notifications: {
+              daily: true,
+              insights: true,
+              milestone: false
+            }
+          },
+          stats: {
+            totalSessions: 0,
+            totalMinutes: 0,
+            currentStreak: 0
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      setError('Failed to load profile');
+      // Use fallback data
+      setProfileData({
+        name: 'Rambl User',
+        email: 'user@example.com',
+        preferences: {
+          notifications: {
+            daily: true,
+            insights: true,
+            milestone: false
+          }
+        },
+        stats: {
+          totalSessions: 0,
+          totalMinutes: 0,
+          currentStreak: 0
+        }
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleNotification = async (type) => {
+    try {
+      const currentUserId = apiService.getCurrentUserId();
+      const newValue = !profileData.preferences.notifications[type];
+      
+      // Update locally first
+      setProfileData(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          notifications: {
+            ...prev.preferences.notifications,
+            [type]: newValue
+          }
+        }
+      }));
+
+      // Update backend
+      await apiService.updateUserProfile(currentUserId, {
+        preferences: {
+          ...profileData.preferences,
+          notifications: {
+            ...profileData.preferences.notifications,
+            [type]: newValue
+          }
+        }
+      });
+
+      const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+      showNotification(`${typeCapitalized} notifications ${newValue ? 'enabled' : 'disabled'} ${newValue ? '🔔' : '🔕'}`);
+      
+    } catch (error) {
+      console.error('Failed to update notification settings:', error);
+      // Revert the change if backend update failed
+      setProfileData(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          notifications: {
+            ...prev.preferences.notifications,
+            [type]: !profileData.preferences.notifications[type]
+          }
+        }
+      }));
+      console.log('Failed to update settings');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="screen active">
+        <div className="header">
+          <div className="header-content">
+            <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Settings</h1>
+            <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Loading your profile...</p>
+          </div>
+        </div>
+        <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
+            <p>Loading settings...</p>
+          </div>
+        </div>
+        <BottomNav currentScreen="settingsScreen" showScreen={showScreen} />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="screen active">
+        <div className="header">
+          <div className="header-content">
+            <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Settings</h1>
+            <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Error loading profile</p>
+          </div>
+        </div>
+        <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '10px' }}>❌</div>
+            <p>Failed to load settings</p>
+            <button 
+              onClick={loadUserProfile}
+              style={{ 
+                marginTop: '10px', 
+                padding: '8px 16px', 
+                backgroundColor: '#8b5cf6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '8px', 
+                cursor: 'pointer' 
+              }}
+            >
+              Retry
+            </button>
+            <button 
+            onClick={() => {
+              localStorage.clear();
+              window.location.reload();
+            }}
+            style={{ 
+              marginTop: '10px', 
+              marginLeft: '10px',
+              padding: '8px 16px', 
+              backgroundColor: '#dc2626', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: 'pointer' 
+            }}
+          >
+            Logout
+          </button>
+          </div>
+        </div>
+        <BottomNav currentScreen="settingsScreen" showScreen={showScreen} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen active">
+      <div className="header">
+        <div className="header-content">
+          <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Settings</h1>
+          <p style={{ fontSize: '16px', opacity: '0.9', fontWeight: '400' }}>Manage your account and preferences</p>
+        </div>
+      </div>
+
+      <div className="main-content">
+        {/* Profile Section */}
+        <div style={{ background: 'linear-gradient(135deg, #f8f6ff 0%, #f3f0ff 100%)', borderRadius: '20px', padding: '25px', marginBottom: '30px', border: '1px solid rgba(139, 92, 246, 0.1)', textAlign: 'center' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', color: 'white', fontWeight: '700', border: '4px solid white', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.2)' }}>
+              {profileData?.name ? profileData.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'RU'}
+            </div>
+            <div style={{ position: 'absolute', bottom: '0', right: '0', width: '28px', height: '28px', background: '#8b5cf6', border: '3px solid white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'white', cursor: 'pointer', transition: 'all 0.3s ease' }}>
+              📸
+            </div>
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#2d1b69', marginBottom: '5px' }}>{profileData?.name || 'Rambl User'}</h2>
+          <p style={{ fontSize: '14px', color: '#8b5cf6', marginBottom: '15px' }}>{profileData?.email || 'user@example.com'}</p>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(139, 92, 246, 0.1)' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>{profileData?.stats?.totalSessions || 0}</div>
+              <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Sessions</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>{profileData?.stats?.totalMinutes || 0}</div>
+              <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Minutes</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>{profileData?.stats?.currentStreak || 0}</div>
+              <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Day Streak</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div style={{ marginBottom: '30px' }}>
+          <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '12px', fontSize: '24px' }}>🔔</span>
+            Notifications
+          </h3>
+          
+          {[
+            { key: 'daily', icon: '📅', title: 'Daily Reminders', subtitle: 'Get reminded to journal each day' },
+            { key: 'insights', icon: '🧠', title: 'Weekly Insights', subtitle: 'Receive AI-generated insights' },
+            { key: 'milestone', icon: '🎉', title: 'Milestones', subtitle: 'Celebrate your journaling achievements' }
+          ].map((item) => (
+            <div key={item.key} style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px', boxShadow: '0 2px 15px rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.3s ease' }} onClick={() => toggleNotification(item.key)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
+                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #f3f0ff 0%, #e8e2ff 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#8b5cf6' }}>{item.icon}</div>
+                <div style={{ flex: '1' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#2d1b69', marginBottom: '2px' }}>{item.title}</div>
+                  <div style={{ fontSize: '13px', color: '#8b5cf6', opacity: '0.8' }}>{item.subtitle}</div>
+                </div>
+              </div>
+              <div style={{ position: 'relative', width: '50px', height: '28px', background: profileData?.preferences?.notifications?.[item.key] ? '#8b5cf6' : 'rgba(139, 92, 246, 0.2)', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
+                <div style={{ position: 'absolute', top: '2px', left: '2px', width: '24px', height: '24px', background: 'white', borderRadius: '50%', transition: 'all 0.3s ease', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)', transform: profileData?.preferences?.notifications?.[item.key] ? 'translateX(22px)' : 'translateX(0)' }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Account Actions */}
+        <div style={{ marginBottom: '30px' }}>
+          <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '12px', fontSize: '24px' }}>⚠️</span>
+            Account Actions
+          </h3>
+          
+          <div 
+  style={{ 
+    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', 
+    borderRadius: '16px', 
+    padding: '18px 20px', 
+    marginBottom: '12px', 
+    boxShadow: '0 2px 15px rgba(239, 68, 68, 0.08)', 
+    border: '1px solid rgba(239, 68, 68, 0.15)', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    cursor: 'pointer', 
+    transition: 'all 0.3s ease' 
+  }} 
+  onClick={() => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      showScreen('loginScreen');
+    }
+  }}
+>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
+              <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#dc2626' }}>🚪</div>
+              <div style={{ flex: '1' }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: '#dc2626', marginBottom: '2px' }}>Log Out</div>
+                <div style={{ fontSize: '13px', color: '#dc2626', opacity: '0.8' }}>Return to login screen</div>
+              </div>
+            </div>
+            <div style={{ color: '#dc2626', fontSize: '16px' }}>→</div>
+          </div>
+        </div>
+      </div>
+
+      <BottomNav currentScreen="settingsScreen" showScreen={showScreen} />
     </div>
-
-    <div className="main-content">
-      {/* Profile Section */}
-      <div style={{ background: 'linear-gradient(135deg, #f8f6ff 0%, #f3f0ff 100%)', borderRadius: '20px', padding: '25px', marginBottom: '30px', border: '1px solid rgba(139, 92, 246, 0.1)', textAlign: 'center' }}>
-        <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', color: 'white', fontWeight: '700', border: '4px solid white', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.2)' }}>
-            JD
-          </div>
-          <div style={{ position: 'absolute', bottom: '0', right: '0', width: '28px', height: '28px', background: '#8b5cf6', border: '3px solid white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'white', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-            📸
-          </div>
-        </div>
-        <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#2d1b69', marginBottom: '5px' }}>{settingsUserData.name}</h2>
-        <p style={{ fontSize: '14px', color: '#8b5cf6', marginBottom: '15px' }}>{settingsUserData.email}</p>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(139, 92, 246, 0.1)' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>23</div>
-            <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Sessions</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>156</div>
-            <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Minutes</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#6b46c1' }}>15</div>
-            <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '2px' }}>Days Active</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Account Settings */}
-      <div style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '12px', fontSize: '24px' }}>👤</span>
-          Account
-        </h3>
-        
-        {[
-          { icon: '✏️', title: 'Edit Profile', subtitle: 'Update your name and email' },
-          { icon: '🔐', title: 'Change Password', subtitle: 'Update your account password' }
-        ].map((item, index) => (
-          <div key={index} style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px', boxShadow: '0 2px 15px rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
-              <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #f3f0ff 0%, #e8e2ff 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#8b5cf6' }}>{item.icon}</div>
-              <div style={{ flex: '1' }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: '#2d1b69', marginBottom: '2px' }}>{item.title}</div>
-                <div style={{ fontSize: '13px', color: '#8b5cf6', opacity: '0.8' }}>{item.subtitle}</div>
-              </div>
-            </div>
-            <div style={{ color: '#8b5cf6', fontSize: '16px' }}>→</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Notifications */}
-      <div style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '12px', fontSize: '24px' }}>🔔</span>
-          Notifications
-        </h3>
-        
-        {[
-          { key: 'daily', icon: '📅', title: 'Daily Reminders', subtitle: 'Get reminded to journal each day' },
-          { key: 'insights', icon: '🧠', title: 'Weekly Insights', subtitle: 'Receive AI-generated insights' },
-          { key: 'milestone', icon: '🎉', title: 'Milestones', subtitle: 'Celebrate your journaling achievements' }
-        ].map((item) => (
-          <div key={item.key} style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px', boxShadow: '0 2px 15px rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.3s ease' }} onClick={() => toggleNotification(item.key)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
-              <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #f3f0ff 0%, #e8e2ff 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#8b5cf6' }}>{item.icon}</div>
-              <div style={{ flex: '1' }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: '#2d1b69', marginBottom: '2px' }}>{item.title}</div>
-                <div style={{ fontSize: '13px', color: '#8b5cf6', opacity: '0.8' }}>{item.subtitle}</div>
-              </div>
-            </div>
-            <div style={{ position: 'relative', width: '50px', height: '28px', background: settingsUserData.notifications[item.key] ? '#8b5cf6' : 'rgba(139, 92, 246, 0.2)', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-              <div style={{ position: 'absolute', top: '2px', left: '2px', width: '24px', height: '24px', background: 'white', borderRadius: '50%', transition: 'all 0.3s ease', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)', transform: settingsUserData.notifications[item.key] ? 'translateX(22px)' : 'translateX(0)' }}></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Support */}
-      <div style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '12px', fontSize: '24px' }}>💬</span>
-          Support
-        </h3>
-        
-        {[
-          { icon: '❓', title: 'Help Center', subtitle: 'FAQs and guides', onClick: () => showNotification('Opening help center... ❓') },
-          { icon: 'ℹ️', title: 'About Rambl', subtitle: 'Version 1.0.0', onClick: () => showNotification('Rambl v1.0.0 - Built with ❤️') }
-        ].map((item, index) => (
-          <div key={index} style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px', boxShadow: '0 2px 15px rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.3s ease' }} onClick={item.onClick}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
-              <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #f3f0ff 0%, #e8e2ff 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#8b5cf6' }}>{item.icon}</div>
-              <div style={{ flex: '1' }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: '#2d1b69', marginBottom: '2px' }}>{item.title}</div>
-                <div style={{ fontSize: '13px', color: '#8b5cf6', opacity: '0.8' }}>{item.subtitle}</div>
-              </div>
-            </div>
-            <div style={{ color: '#8b5cf6', fontSize: '16px' }}>→</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Account Actions */}
-      <div style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '20px', color: '#6b46c1', display: 'flex', alignItems: 'center' }}>
-          <span style={{ marginRight: '12px', fontSize: '24px' }}>⚠️</span>
-          Account Actions
-        </h3>
-        
-        <div style={{ background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px', boxShadow: '0 2px 15px rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.3s ease' }} onClick={confirmLogout}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: '1' }}>
-            <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#dc2626' }}>🚪</div>
-            <div style={{ flex: '1' }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#dc2626', marginBottom: '2px' }}>Log Out</div>
-              <div style={{ fontSize: '13px', color: '#dc2626', opacity: '0.8' }}>Return to login screen</div>
-            </div>
-          </div>
-          <div style={{ color: '#dc2626', fontSize: '16px' }}>→</div>
-        </div>
-      </div>
-    </div>
-
-    <BottomNav currentScreen="settingsScreen" showScreen={showScreen} />
-  </div>
-);
+  );
+};
 
 const TimelineScreen = ({ showScreen }) => (
   <div className="screen active">
@@ -1052,6 +1322,8 @@ const RamblApp = () => {
   const { user, loading, error, signup, login, logout } = useAuth();
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ email: '', password: '', name: '' });
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingTimer, setRecordingTimer] = useState(null);
 
   // Main app state
   const [currentScreen, setCurrentScreen] = useState('loginScreen');
@@ -1059,6 +1331,7 @@ const RamblApp = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [currentPromptCategory, setCurrentPromptCategory] = useState('goals');
+  const [currentPrompt, setCurrentPrompt] = useState('');
   
   // Onboarding state
   const [currentOnboardingStep, setCurrentOnboardingStep] = useState(0);
@@ -1078,6 +1351,19 @@ const RamblApp = () => {
       milestone: false
     }
   });
+  const [userId, setUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  console.log('isLoading declared:', isLoading); 
+
+  // Sync userId from auth user
+  useEffect(() => {
+    if (user) {
+      setUserId(user.uid);
+      console.log('User authenticated:', user.uid);
+    } else {
+      setUserId(null);
+    }
+  }, [user]);
 
   // Prompt database
   const prompts = {
@@ -1184,11 +1470,18 @@ const RamblApp = () => {
   };
 
   // Add this useEffect after your useState declarations
+  //useEffect(() => {
+  //  if (user && currentScreen === 'loginScreen') {
+  //    setCurrentScreen('homeScreen');
+  //  }
+  // }, [user, currentScreen]);
+
+  // Initialize userId when app starts
   useEffect(() => {
-    if (user && currentScreen === 'loginScreen') {
-      setCurrentScreen('homeScreen');
-    }
-  }, [user, currentScreen]);
+  if (user && user.uid) {
+    setUserId(user.uid);
+  }
+}, [user]);
 
   // Navigation functions
   const showScreen = (screenId) => {
@@ -1262,12 +1555,52 @@ const RamblApp = () => {
     });
   };
 
-  const finishOnboarding = () => {
-    showNotification('Welcome to Rambl! Let\'s start your first journal entry 🎉');
+const finishOnboarding = async () => {
+  setIsLoading(true);
+  try {
+    const currentUserId = user?.uid || apiService.getCurrentUserId();
+    setUserId(currentUserId);
+
+    // Create user profile with name and email from signupForm
+    const profileData = {
+      name: signupForm.name || user?.displayName || `User ${Date.now()}`,
+      email: signupForm.email || user?.email || '',
+      age: userData.age,
+      frequency: userData.frequency,
+      goals: userData.goals,
+      preferences: {
+        notifications: {
+          daily: true,
+          insights: true,
+          milestone: false
+        },
+        preferredCategories: userData.goals || [],
+        preferredDifficulty: null
+      }
+    };
+
+    console.log('Creating user profile:', profileData);
+    const response = await apiService.createUserProfile(currentUserId, profileData);
+    
+    if (response.success) {
+      showNotification('Welcome to Rambl! Profile created successfully 🎉');
+      console.log('Profile created:', response.profile);
+    }
+    
     setTimeout(() => {
       setCurrentScreen('homeScreen');
     }, 1500);
-  };
+
+  } catch (error) {
+    console.error('Failed to create user profile:', error);
+    showNotification('Profile created locally - welcome to Rambl! 🎉');
+    setTimeout(() => {
+      setCurrentScreen('homeScreen');
+    }, 1500);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Category selection
   const selectCategory = (category) => {
@@ -1307,6 +1640,7 @@ const RamblApp = () => {
   const showMainPrompt = (level) => {
     const prompts_array = prompts[currentPromptCategory][level];
     const randomPrompt = prompts_array[Math.floor(Math.random() * prompts_array.length)];
+    setCurrentPrompt(randomPrompt);
     // Prompt will be displayed based on selectedLevel state
   };
 
@@ -1321,15 +1655,70 @@ const RamblApp = () => {
     setSelectedLevel(null);
   };
 
-  const startMainRecording = () => {
+ const startMainRecording = async () => {
+  try {
+    await audioRecorder.startRecording();
+    setIsRecording(true);
     showNotification('🎤 Recording started! (10 minute limit)');
+    
+    // Start timer
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setRecordingDuration(elapsed);
+      
+      // Auto-stop at 10 minutes
+      if (elapsed >= 600) {
+        stopMainRecording();
+      }
+    }, 1000);
+    
+    setRecordingTimer(timer);
+  } catch (error) {
+    console.error('Recording error:', error);
+    showNotification('❌ Could not access microphone. Please check permissions.');
+  }
+};
+
+const stopMainRecording = async () => {
+  try {
+    if (recordingTimer) {
+      clearInterval(recordingTimer);
+      setRecordingTimer(null);
+    }
+    
+    const audioBlob = await audioRecorder.stopRecording();
+    setIsRecording(false);
+    
+    showNotification('⏳ Processing your journal entry...');
+    
+    // Get the current prompt
+    const currentPromptText = selectedCategory === 'general' 
+  ? 'Free Rambl - Speak your mind'
+  : prompts[currentPromptCategory][selectedLevel][0];
+    
+    const metadata = {
+      category: selectedCategory,
+      difficulty: selectedLevel,
+      prompt: currentPromptText,
+      duration: recordingDuration
+    };
+    
+    await apiService.uploadAudioEntry(audioBlob, metadata);
+    
+    showNotification('✅ Recording saved! Check Analytics for insights');
+    setRecordingDuration(0);
+    
     setTimeout(() => {
-      showNotification('📝 Recording saved! Check Analytics for insights');
-      setTimeout(() => {
-        setCurrentScreen('homeScreen');
-      }, 1500);
-    }, 3000);
-  };
+      setCurrentScreen('homeScreen');
+    }, 1500);
+  } catch (error) {
+    console.error('Error stopping recording:', error);
+    showNotification('❌ Failed to save recording');
+    setIsRecording(false);
+    setRecordingDuration(0);
+  }
+};
 
   // Settings functions
   const toggleNotification = (type) => {
@@ -1343,7 +1732,7 @@ const RamblApp = () => {
     
     const enabled = !settingsUserData.notifications[type];
     const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
-    showNotification(`${typeCapitalized} notifications ${enabled ? 'enabled' : 'disabled'} ${enabled ? '🔔' : '🔕'}`);
+    showNotification(`${typeCapitalized} notifications ${enabled ? 'enabled' : 'disabled'}`);
   };
 
   const confirmLogout = async () => {
@@ -1452,6 +1841,7 @@ const RamblApp = () => {
           selectOnboardingOption={selectOnboardingOption}
           toggleOnboardingMultiOption={toggleOnboardingMultiOption}
           finishOnboarding={finishOnboarding}
+          isLoading={isLoading}
         />
       );
     }
@@ -1466,6 +1856,10 @@ const RamblApp = () => {
             selectCategory={selectCategory}
             showScreen={showScreen}
             showNotification={showNotification}
+            setSelectedCategory={setSelectedCategory}
+            setSelectedLevel={setSelectedLevel}
+            setCurrentPrompt={setCurrentPrompt}
+          setCurrentScreen={setCurrentScreen}
           />
         )}
         {currentScreen === 'promptScreen' && (
@@ -1474,6 +1868,7 @@ const RamblApp = () => {
             categoryInfo={categoryInfo}
             selectedLevel={selectedLevel}
             prompts={prompts}
+            currentPrompt={currentPrompt} 
             showScreen={showScreen}
             selectDifficulty={selectDifficulty}
             selectRandomDifficulty={selectRandomDifficulty}
@@ -1481,20 +1876,46 @@ const RamblApp = () => {
             shuffleMainPrompt={shuffleMainPrompt}
             startMainRecording={startMainRecording}
             resetMainSelection={resetMainSelection}
+            isRecording={isRecording}
+            recordingDuration={recordingDuration}
+            stopMainRecording={stopMainRecording}
           />
         )}
-        {currentScreen === 'analyticsScreen' && <AnalyticsScreen showScreen={showScreen} />}
-        {currentScreen === 'libraryScreen' && <LibraryScreen showScreen={showScreen} />}
-        {currentScreen === 'settingsScreen' && (
-          <SettingsScreen 
-            settingsUserData={settingsUserData}
-            toggleNotification={toggleNotification}
-            confirmLogout={confirmLogout}
-            showNotification={showNotification}
+
+        {currentScreen === 'freeRecordingScreen' && (
+          <FreeRecordingScreen 
             showScreen={showScreen}
+            startMainRecording={startMainRecording}
+            stopMainRecording={stopMainRecording}
+            isRecording={isRecording}
+            recordingDuration={recordingDuration}
           />
-        )}
-        {currentScreen === 'timelineScreen' && <TimelineScreen showScreen={showScreen} />}
+      )}
+
+        {currentScreen === 'analyticsScreen' && (
+  <AnalyticsScreen 
+    user={user}
+    userId={userId}
+    currentScreen={currentScreen}
+    showScreen={showScreen}
+    showNotification={showNotification}
+  />
+)}
+{currentScreen === 'timelineScreen' && (
+  <JournalSessions 
+    userId={userId}
+    showScreen={showScreen}
+    showNotification={showNotification}
+  />
+)}
+{currentScreen === 'libraryScreen' && <LibraryScreen showScreen={showScreen} />}
+{currentScreen === 'settingsScreen' && (
+  <SettingsScreen 
+    showNotification={showNotification}
+    showScreen={showScreen}
+    userId={userId}
+  />
+)}
       </div>
     );
   };

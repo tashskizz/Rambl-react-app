@@ -19,7 +19,16 @@ export const useAuth = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
-    });
+      
+        // Store the real Firebase user ID in localStorage
+    if (user) {
+      localStorage.setItem('userId', user.uid);
+      console.log('✅ Stored userId in localStorage:', user.uid);
+    } else {
+      localStorage.removeItem('userId');
+      console.log('🚪 Removed userId from localStorage');
+    }
+  });
 
     return unsubscribe; // Cleanup subscription on unmount
   }, []);
